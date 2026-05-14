@@ -101,7 +101,8 @@
     box-shadow: 0 20px 40px -20px rgba(0, 0, 0, 0.15);
   }
 
-  .target-card svg {
+  .target-card svg,
+  .target-card img {
     width: 100%;
     height: auto;
     display: block;
@@ -387,9 +388,10 @@
     <h1>The drawing<br /><em>becomes</em> the building.</h1>
     <p class="subtitle">Point your phone at the floor plan below and watch a 3D model rise from the page in augmented reality. No app needed.</p>
 
-    <!-- Target image preview (the floor plan placeholder) -->
+    <!-- Target image preview (the floor plan) -->
     <div class="target-card">
-      <svg id="target-preview" viewBox="0 0 800 600" xmlns="http://www.w3.org/2000/svg">
+      <img id="target-preview" src="./floor_plan_1.webp" alt="Floor plan target" />
+      <svg style="display:none" viewBox="0 0 800 600" xmlns="http://www.w3.org/2000/svg">
         <!-- Background -->
         <rect width="800" height="600" fill="#fefdfa"/>
 
