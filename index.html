@@ -850,6 +850,12 @@
         uiLoading: DEBUG ? 'yes' : 'no',
         uiScanning: DEBUG ? 'yes' : 'no',
         uiError: 'no',
+        // Stability tuning — smoother pose, more forgiving when target briefly drops out.
+        // filterMinCF lower = less high-frequency jitter; filterBeta lower = less twitchy.
+        filterMinCF: 0.00005,
+        filterBeta: 10,
+        warmupTolerance: 5,
+        missTolerance: 12,
       });
       dbg('MindARThree constructed');
 
