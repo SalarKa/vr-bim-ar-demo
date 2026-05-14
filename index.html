@@ -821,7 +821,13 @@
   // For this demo, we generate the .mind on the fly is NOT possible client-side,
   // so we ship a pre-compiled targets.mind file alongside this HTML, OR use a
   // hosted demo target from MindAR's CDN.
-  const TARGET_URL = './targets.mind';
+  // ?test in the URL swaps in MindAR's official known-good example target (a tarot card)
+  // for diagnostics. Print/display the card image at the URL printed in the debug log.
+  const USE_TEST_TARGET = new URLSearchParams(location.search).has('test');
+  const TEST_TARGET_URL = 'https://cdn.jsdelivr.net/gh/hiukim/mind-ar-js@1.2.5/examples/image-tracking/assets/card-example/card.mind';
+  const TEST_IMAGE_URL = 'https://cdn.jsdelivr.net/gh/hiukim/mind-ar-js@1.2.5/examples/image-tracking/assets/card-example/card.png';
+  const TARGET_URL = USE_TEST_TARGET ? TEST_TARGET_URL : './targets.mind';
+  if (USE_TEST_TARGET) dbg('TEST MODE · point camera at ' + TEST_IMAGE_URL);
 
   async function startAR() {
     dbg('startAR clicked');
