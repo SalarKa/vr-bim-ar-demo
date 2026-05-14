@@ -87,8 +87,9 @@
   <div class="step">
     <div class="step-num">STEP 01</div>
     <h3>Load the floor plan image</h3>
-    <p>Loads <code>floor_plan_1.webp</code> from this folder and prepares it for tracking.</p>
-    <button id="render-btn">Load Floor Plan</button>
+    <p>Click below and pick <code>floor_plan_1.webp</code> from this folder (or any image you want to track).</p>
+    <input type="file" id="file-input" accept="image/*" style="display:none" />
+    <button id="render-btn">Choose Floor Plan…</button>
     <img id="preview" style="display:none" />
   </div>
 
@@ -226,11 +227,17 @@
     status.classList.add('visible');
   }
 
-  renderBtn.addEventListener('click', async () => {
-    setStatus('Loading floor_plan_1.webp...');
+  const fileInput = document.getElementById('file-input');
 
+  renderBtn.addEventListener('click', () => fileInput.click());
+
+  fileInput.addEventListener('change', () => {
+    const file = fileInput.files && fileInput.files[0];
+    if (!file) return;
+    setStatus('Loading ' + file.name + '...');
+
+    const objectURL = URL.createObjectURL(file);
     const img = new Image();
-    img.crossOrigin = 'anonymous';
     img.onload = () => {
       const canvas = document.createElement('canvas');
       canvas.width = img.naturalWidth;
@@ -246,13 +253,15 @@
         preview.style.display = 'block';
         compileBtn.disabled = false;
         downloadPngBtn.disabled = false;
-        setStatus('✓ Loaded ' + img.naturalWidth + '×' + img.naturalHeight + '. Now compile the target.');
+        setStatus('✓ Loaded ' + file.name + ' (' + img.naturalWidth + '×' + img.naturalHeight + '). Now compile the target.');
+        URL.revokeObjectURL(objectURL);
       }, 'image/png');
     };
     img.onerror = () => {
-      setStatus('✗ Failed to load ./floor_plan_1.webp — is the file in the same folder as compiler.html?');
+      setStatus('✗ Could not decode ' + file.name + ' — make sure it is a valid image.');
+      URL.revokeObjectURL(objectURL);
     };
-    img.src = './floor_plan_1.webp';
+    img.src = objectURL;
   });
 
   compileBtn.addEventListener('click', async () => {
