@@ -557,6 +557,14 @@
   <p>This demo needs camera access and an HTTPS connection. Please reload over HTTPS and allow camera permissions.</p>
 </div>
 
+<!-- ============ DEBUG OVERLAY (visible when ?debug in URL) ============ -->
+<div id="debug" style="
+  position:fixed;bottom:0;left:0;right:0;z-index:500;
+  background:rgba(0,0,0,0.78);color:#0f0;
+  font-family:Menlo,Consolas,monospace;font-size:11px;line-height:1.4;
+  padding:8px 12px;max-height:45vh;overflow-y:auto;
+  display:none;white-space:pre-wrap;word-break:break-word;"></div>
+
 <!-- ============ SCRIPTS ============ -->
 <script type="importmap">
 {
@@ -586,6 +594,22 @@
   let buildingGroup = null;
   let animationId = null;
   let isTargetVisible = false;
+
+  // ---------- DEBUG OVERLAY ----------
+  const debugEl = document.getElementById('debug');
+  const DEBUG = new URLSearchParams(location.search).has('debug');
+  if (DEBUG) debugEl.style.display = 'block';
+  function dbg(msg) {
+    const line = `[${(performance.now() / 1000).toFixed(2)}s] ${msg}`;
+    console.log(line);
+    if (DEBUG) {
+      debugEl.textContent += line + '\n';
+      debugEl.scrollTop = debugEl.scrollHeight;
+    }
+  }
+  window.addEventListener('error', (e) => dbg('JS ERROR: ' + (e.message || e.error) + ' @ ' + e.filename + ':' + e.lineno));
+  window.addEventListener('unhandledrejection', (e) => dbg('PROMISE REJECT: ' + (e.reason && (e.reason.message || e.reason))));
+  dbg('page loaded · UA=' + navigator.userAgent.slice(0, 80));
 
   // ---------- BUILD THE PLACEHOLDER 3D BUILDING ----------
   // Procedural building that roughly matches the floor plan footprint above.
@@ -800,26 +824,38 @@
   const TARGET_URL = './targets.mind';
 
   async function startAR() {
+    dbg('startAR clicked');
     loading.classList.remove('hidden');
     landing.classList.add('hidden');
 
     try {
+      dbg('fetching ' + TARGET_URL + ' to verify reachability...');
+      const probe = await fetch(TARGET_URL, { method: 'HEAD' });
+      dbg('targets.mind HEAD → ' + probe.status + ' · size=' + probe.headers.get('content-length'));
+
+      dbg('constructing MindARThree...');
       mindarThree = new MindARThree({
         container: arContainer,
         imageTargetSrc: TARGET_URL,
-        uiLoading: 'no',
-        uiScanning: 'no',
+        uiLoading: DEBUG ? 'yes' : 'no',
+        uiScanning: DEBUG ? 'yes' : 'no',
         uiError: 'no',
       });
+      dbg('MindARThree constructed');
 
       const { renderer, scene, camera } = mindarThree;
       const anchor = mindarThree.addAnchor(0);
+      dbg('anchor(0) added');
 
       // Build & attach
       buildingGroup = createBuilding();
       anchor.group.add(buildingGroup);
+      dbg('building attached to anchor');
 
+      let foundCount = 0;
       anchor.onTargetFound = () => {
+        foundCount++;
+        dbg('★ TARGET FOUND (#' + foundCount + ')');
         isTargetVisible = true;
         scanHint.classList.add('hidden');
         statusPill.classList.add('visible');
@@ -827,11 +863,24 @@
       };
 
       anchor.onTargetLost = () => {
+        dbg('· target lost');
         isTargetVisible = false;
         scanHint.classList.remove('hidden');
       };
 
+      dbg('calling mindarThree.start() — this initializes camera + loads .mind ...');
       await mindarThree.start();
+      dbg('✓ mindarThree.start() resolved — camera stream live');
+
+      // Probe video stream
+      const video = arContainer.querySelector('video');
+      if (video) {
+        dbg('video element: ' + video.videoWidth + 'x' + video.videoHeight + ' readyState=' + video.readyState);
+        video.addEventListener('loadedmetadata', () => dbg('video loadedmetadata: ' + video.videoWidth + 'x' + video.videoHeight));
+        video.addEventListener('playing', () => dbg('video playing'));
+      } else {
+        dbg('WARN: no <video> element found inside ar-container');
+      }
 
       loading.classList.add('hidden');
       arContainer.classList.remove('hidden');
@@ -856,6 +905,8 @@
       animate();
     } catch (err) {
       console.error('AR start failed:', err);
+      dbg('✗ AR start failed: ' + (err && (err.message || err)));
+      dbg('stack: ' + (err && err.stack ? err.stack.slice(0, 400) : 'n/a'));
       loading.classList.add('hidden');
       errorEl.classList.add('visible');
     }
