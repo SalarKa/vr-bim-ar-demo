@@ -1,0 +1,17 @@
+# OS junk
+.DS_Store
+Thumbs.db
+desktop.ini
+
+# Editor / IDE
+.vscode/
+.idea/
+*.swp
+*~
+
+# Logs
+*.log
+
+# Note: targets.mind and floorplan.png ARE committed
+# (they're generated once via compiler.html and need to ship with index.html
+# for the demo to work on GitHub Pages).

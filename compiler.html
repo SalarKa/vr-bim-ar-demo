@@ -1,0 +1,299 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Target Compiler · AR Demo Setup</title>
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body {
+    font-family: 'Helvetica Neue', sans-serif;
+    background: #f4f1ea;
+    color: #0a0a0a;
+    padding: 32px 20px;
+    line-height: 1.5;
+  }
+  .container { max-width: 640px; margin: 0 auto; }
+  h1 {
+    font-family: Georgia, serif;
+    font-size: 32px;
+    font-weight: 400;
+    margin-bottom: 8px;
+  }
+  .subtitle { opacity: 0.7; margin-bottom: 32px; font-size: 14px; }
+  .step {
+    background: white;
+    border: 1px solid rgba(0,0,0,0.1);
+    padding: 20px;
+    margin-bottom: 16px;
+  }
+  .step-num {
+    font-size: 11px;
+    letter-spacing: 0.2em;
+    color: #d94f30;
+    font-weight: 700;
+    margin-bottom: 8px;
+  }
+  .step h3 {
+    font-family: Georgia, serif;
+    font-weight: 400;
+    font-size: 18px;
+    margin-bottom: 8px;
+  }
+  .step p { font-size: 14px; opacity: 0.8; margin-bottom: 12px; }
+  button, .btn {
+    background: #0a0a0a;
+    color: #f4f1ea;
+    border: none;
+    padding: 12px 20px;
+    font-family: inherit;
+    font-size: 12px;
+    letter-spacing: 0.2em;
+    text-transform: uppercase;
+    cursor: pointer;
+    text-decoration: none;
+    display: inline-block;
+  }
+  button:hover, .btn:hover { background: #d94f30; }
+  button:disabled { opacity: 0.5; cursor: not-allowed; }
+  #status {
+    margin-top: 12px;
+    font-size: 13px;
+    padding: 10px;
+    background: #fbf6e8;
+    border-left: 3px solid #d94f30;
+    display: none;
+  }
+  #status.visible { display: block; }
+  #preview {
+    max-width: 100%;
+    border: 1px solid rgba(0,0,0,0.1);
+    margin-top: 12px;
+  }
+  code {
+    background: #fbf6e8;
+    padding: 2px 6px;
+    font-size: 12px;
+    border-radius: 2px;
+  }
+  a { color: #d94f30; }
+</style>
+</head>
+<body>
+<div class="container">
+  <h1>Target Compiler</h1>
+  <p class="subtitle">Generate the <code>targets.mind</code> file your AR demo needs.</p>
+
+  <div class="step">
+    <div class="step-num">STEP 01</div>
+    <h3>Render the floor plan as PNG</h3>
+    <p>This converts the SVG floor plan from your demo into a high-resolution PNG suitable for tracking.</p>
+    <button id="render-btn">Render Floor Plan</button>
+    <img id="preview" style="display:none" />
+  </div>
+
+  <div class="step">
+    <div class="step-num">STEP 02</div>
+    <h3>Compile to <code>.mind</code> format</h3>
+    <p>This processes the image into MindAR's binary target format. Takes ~10–30 seconds.</p>
+    <button id="compile-btn" disabled>Compile Target</button>
+    <div id="status"></div>
+  </div>
+
+  <div class="step">
+    <div class="step-num">STEP 03</div>
+    <h3>Download <code>targets.mind</code></h3>
+    <p>Place this file in the same folder as <code>index.html</code> when you deploy.</p>
+    <button id="download-btn" disabled>Download targets.mind</button>
+  </div>
+
+  <div class="step">
+    <div class="step-num">STEP 04</div>
+    <h3>Also download the printable target</h3>
+    <p>You'll want a clean PNG of the floor plan to print or display. This is what users will scan.</p>
+    <button id="download-png-btn" disabled>Download floorplan.png</button>
+  </div>
+
+  <p style="margin-top: 32px; font-size: 12px; opacity: 0.6;">
+    Powered by <a href="https://hiukim.github.io/mind-ar-js-doc/" target="_blank">MindAR</a> ·
+    Alternative: use the <a href="https://hiukim.github.io/mind-ar-js-doc/tools/compile" target="_blank">official online compiler</a> with the downloaded PNG.
+  </p>
+</div>
+
+<!-- Hidden SVG source — same as in index.html -->
+<svg id="src-svg" style="display:none" viewBox="0 0 800 600" xmlns="http://www.w3.org/2000/svg">
+  <rect width="800" height="600" fill="#fefdfa"/>
+  <rect x="40" y="40" width="280" height="60" fill="none" stroke="#0a0a0a" stroke-width="2"/>
+  <text x="55" y="65" font-family="Helvetica" font-size="11" letter-spacing="2" fill="#0a0a0a">PROJECT 0247</text>
+  <text x="55" y="88" font-family="Georgia" font-size="20" fill="#0a0a0a">North Pavilion</text>
+  <g transform="translate(720, 70)">
+    <circle cx="0" cy="0" r="32" fill="none" stroke="#0a0a0a" stroke-width="1.5"/>
+    <path d="M0,-28 L6,0 L0,28 L-6,0 Z" fill="#d94f30"/>
+    <text x="0" y="-38" font-family="Helvetica" font-size="10" fill="#0a0a0a" text-anchor="middle">N</text>
+  </g>
+  <g stroke="#0a0a0a" stroke-width="3" fill="none">
+    <path d="M 120 180 L 540 180 L 540 280 L 680 280 L 680 480 L 380 480 L 380 440 L 120 440 Z" fill="#fbf6e8"/>
+  </g>
+  <g stroke="#0a0a0a" stroke-width="2" fill="none">
+    <line x1="280" y1="180" x2="280" y2="320"/>
+    <line x1="280" y1="320" x2="420" y2="320"/>
+    <line x1="420" y1="180" x2="420" y2="320"/>
+    <line x1="420" y1="380" x2="540" y2="380"/>
+    <line x1="540" y1="380" x2="540" y2="440"/>
+    <line x1="540" y1="280" x2="540" y2="380"/>
+    <line x1="540" y1="380" x2="680" y2="380"/>
+    <line x1="120" y1="320" x2="280" y2="320"/>
+  </g>
+  <g stroke="#0a0a0a" stroke-width="1" fill="none">
+    <path d="M 180 320 A 35 35 0 0 1 215 355" />
+    <line x1="180" y1="320" x2="215" y2="320" stroke-width="2"/>
+    <path d="M 350 320 A 30 30 0 0 1 380 350" />
+    <path d="M 480 380 A 25 25 0 0 1 505 405" />
+  </g>
+  <g stroke="#0a0a0a" stroke-width="1" fill="none">
+    <rect x="160" y="220" width="80" height="40" rx="4"/>
+    <circle cx="180" cy="240" r="5"/>
+    <circle cx="220" cy="240" r="5"/>
+    <rect x="310" y="220" width="40" height="20"/>
+    <rect x="370" y="220" width="40" height="20"/>
+    <rect x="310" y="270" width="40" height="20"/>
+    <rect x="370" y="270" width="40" height="20"/>
+    <rect x="450" y="200" width="60" height="25" rx="3"/>
+    <rect x="450" y="240" width="25" height="60" rx="3"/>
+    <g>
+      <rect x="160" y="360" width="80" height="60" fill="none"/>
+      <line x1="160" y1="370" x2="240" y2="370"/>
+      <line x1="160" y1="380" x2="240" y2="380"/>
+      <line x1="160" y1="390" x2="240" y2="390"/>
+      <line x1="160" y1="400" x2="240" y2="400"/>
+      <line x1="160" y1="410" x2="240" y2="410"/>
+    </g>
+    <circle cx="600" cy="320" r="8"/>
+    <circle cx="630" cy="320" r="8"/>
+    <rect x="585" y="345" width="20" height="12" rx="2"/>
+  </g>
+  <g font-family="Helvetica" font-size="11" fill="#0a0a0a">
+    <line x1="120" y1="155" x2="540" y2="155" stroke="#0a0a0a" stroke-width="0.5"/>
+    <line x1="120" y1="148" x2="120" y2="162" stroke="#0a0a0a" stroke-width="0.5"/>
+    <line x1="540" y1="148" x2="540" y2="162" stroke="#0a0a0a" stroke-width="0.5"/>
+    <text x="330" y="148" text-anchor="middle">42'-0"</text>
+    <line x1="105" y1="180" x2="105" y2="440" stroke="#0a0a0a" stroke-width="0.5"/>
+    <line x1="98" y1="180" x2="112" y2="180" stroke="#0a0a0a" stroke-width="0.5"/>
+    <line x1="98" y1="440" x2="112" y2="440" stroke="#0a0a0a" stroke-width="0.5"/>
+    <text x="95" y="315" text-anchor="end">26'-0"</text>
+  </g>
+  <g font-family="Georgia" font-size="13" fill="#0a0a0a" font-style="italic">
+    <text x="200" y="290" text-anchor="middle">Conference</text>
+    <text x="350" y="250" text-anchor="middle">Office</text>
+    <text x="480" y="280" text-anchor="middle">Lounge</text>
+    <text x="610" y="430" text-anchor="middle">Kitchen</text>
+    <text x="200" y="395" text-anchor="middle">Lobby</text>
+  </g>
+  <g font-family="Helvetica" font-size="14" fill="#d94f30">
+    <circle cx="120" cy="180" r="14" fill="white" stroke="#d94f30" stroke-width="2"/>
+    <text x="120" y="184" text-anchor="middle" font-weight="bold">A</text>
+    <circle cx="540" cy="180" r="14" fill="white" stroke="#d94f30" stroke-width="2"/>
+    <text x="540" y="184" text-anchor="middle" font-weight="bold">B</text>
+    <circle cx="680" cy="280" r="14" fill="white" stroke="#d94f30" stroke-width="2"/>
+    <text x="680" y="284" text-anchor="middle" font-weight="bold">C</text>
+    <circle cx="680" cy="480" r="14" fill="white" stroke="#d94f30" stroke-width="2"/>
+    <text x="680" y="484" text-anchor="middle" font-weight="bold">D</text>
+    <circle cx="120" cy="440" r="14" fill="white" stroke="#d94f30" stroke-width="2"/>
+    <text x="120" y="444" text-anchor="middle" font-weight="bold">E</text>
+  </g>
+  <g font-family="Helvetica" font-size="10" letter-spacing="1.5" fill="#0a0a0a" opacity="0.7">
+    <line x1="40" y1="540" x2="760" y2="540" stroke="#0a0a0a" stroke-width="0.5" opacity="0.4"/>
+    <text x="40" y="560">SCALE 1:100</text>
+    <text x="400" y="560" text-anchor="middle">FLOOR PLAN — LEVEL 01</text>
+    <text x="760" y="560" text-anchor="end">SHEET A-101</text>
+  </g>
+</svg>
+
+<script src="https://cdn.jsdelivr.net/npm/mind-ar@1.2.5/dist/mindar-image.prod.js"></script>
+<script>
+  const renderBtn = document.getElementById('render-btn');
+  const compileBtn = document.getElementById('compile-btn');
+  const downloadBtn = document.getElementById('download-btn');
+  const downloadPngBtn = document.getElementById('download-png-btn');
+  const preview = document.getElementById('preview');
+  const status = document.getElementById('status');
+
+  let pngBlob = null;
+  let mindBuffer = null;
+
+  function setStatus(msg) {
+    status.textContent = msg;
+    status.classList.add('visible');
+  }
+
+  renderBtn.addEventListener('click', async () => {
+    setStatus('Rendering SVG to PNG at high resolution...');
+    const svgEl = document.getElementById('src-svg');
+    const svgString = new XMLSerializer().serializeToString(svgEl);
+    const svgBlob = new Blob([svgString], { type: 'image/svg+xml;charset=utf-8' });
+    const url = URL.createObjectURL(svgBlob);
+
+    const img = new Image();
+    img.onload = () => {
+      const SCALE = 2; // 1600x1200
+      const canvas = document.createElement('canvas');
+      canvas.width = 800 * SCALE;
+      canvas.height = 600 * SCALE;
+      const ctx = canvas.getContext('2d');
+      ctx.fillStyle = '#fefdfa';
+      ctx.fillRect(0, 0, canvas.width, canvas.height);
+      ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
+
+      canvas.toBlob((blob) => {
+        pngBlob = blob;
+        preview.src = URL.createObjectURL(blob);
+        preview.style.display = 'block';
+        compileBtn.disabled = false;
+        downloadPngBtn.disabled = false;
+        setStatus('✓ PNG rendered. Now compile the target.');
+        URL.revokeObjectURL(url);
+      }, 'image/png');
+    };
+    img.src = url;
+  });
+
+  compileBtn.addEventListener('click', async () => {
+    if (!pngBlob) return;
+    setStatus('Compiling target... this takes 10–30 seconds.');
+    compileBtn.disabled = true;
+
+    try {
+      const compiler = new MINDAR.IMAGE.Compiler();
+      const imgBitmap = await createImageBitmap(pngBlob);
+      await compiler.compileImageTargets([imgBitmap], (progress) => {
+        setStatus(`Compiling... ${progress.toFixed(1)}%`);
+      });
+      const exportedBuffer = await compiler.exportData();
+      mindBuffer = exportedBuffer;
+      downloadBtn.disabled = false;
+      setStatus('✓ Compiled successfully. Download targets.mind below.');
+    } catch (err) {
+      setStatus('✗ Compilation failed: ' + err.message);
+      compileBtn.disabled = false;
+    }
+  });
+
+  downloadBtn.addEventListener('click', () => {
+    if (!mindBuffer) return;
+    const blob = new Blob([mindBuffer], { type: 'application/octet-stream' });
+    const a = document.createElement('a');
+    a.href = URL.createObjectURL(blob);
+    a.download = 'targets.mind';
+    a.click();
+  });
+
+  downloadPngBtn.addEventListener('click', () => {
+    if (!pngBlob) return;
+    const a = document.createElement('a');
+    a.href = URL.createObjectURL(pngBlob);
+    a.download = 'floorplan.png';
+    a.click();
+  });
+</script>
+</body>
+</html>

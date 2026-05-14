@@ -1,0 +1,884 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
+<title>AR Floor Plan Demo</title>
+<style>
+  :root {
+    --ink: #0a0a0a;
+    --paper: #f4f1ea;
+    --accent: #d94f30;
+    --line: rgba(10, 10, 10, 0.12);
+  }
+
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+
+  html, body {
+    width: 100%;
+    height: 100%;
+    overflow: hidden;
+    font-family: 'Georgia', 'Times New Roman', serif;
+    background: var(--paper);
+    color: var(--ink);
+    -webkit-font-smoothing: antialiased;
+  }
+
+  /* ---------- LANDING SCREEN ---------- */
+  #landing {
+    position: fixed;
+    inset: 0;
+    z-index: 100;
+    background: var(--paper);
+    background-image:
+      radial-gradient(circle at 20% 10%, rgba(217, 79, 48, 0.08), transparent 40%),
+      radial-gradient(circle at 80% 90%, rgba(10, 10, 10, 0.05), transparent 50%);
+    display: flex;
+    flex-direction: column;
+    overflow-y: auto;
+  }
+
+  #landing.hidden { display: none; }
+
+  .landing-inner {
+    max-width: 520px;
+    width: 100%;
+    margin: 0 auto;
+    padding: 32px 28px 48px;
+    display: flex;
+    flex-direction: column;
+    min-height: 100%;
+  }
+
+  .header-rule {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    font-size: 11px;
+    letter-spacing: 0.18em;
+    text-transform: uppercase;
+    color: var(--ink);
+    opacity: 0.7;
+    font-family: 'Helvetica Neue', sans-serif;
+    margin-bottom: 28px;
+  }
+
+  .header-rule::before, .header-rule::after {
+    content: '';
+    flex: 1;
+    height: 1px;
+    background: var(--ink);
+    opacity: 0.3;
+  }
+
+  h1 {
+    font-size: 44px;
+    line-height: 1.05;
+    letter-spacing: -0.02em;
+    font-weight: 400;
+    margin-bottom: 6px;
+  }
+
+  h1 em {
+    font-style: italic;
+    color: var(--accent);
+  }
+
+  .subtitle {
+    font-size: 15px;
+    line-height: 1.5;
+    opacity: 0.75;
+    margin-bottom: 36px;
+    font-family: 'Helvetica Neue', sans-serif;
+  }
+
+  /* The target image preview */
+  .target-card {
+    border: 1px solid var(--line);
+    background: white;
+    padding: 16px;
+    margin-bottom: 24px;
+    box-shadow: 0 20px 40px -20px rgba(0, 0, 0, 0.15);
+  }
+
+  .target-card svg {
+    width: 100%;
+    height: auto;
+    display: block;
+  }
+
+  .target-label {
+    display: flex;
+    justify-content: space-between;
+    font-family: 'Helvetica Neue', sans-serif;
+    font-size: 10px;
+    letter-spacing: 0.15em;
+    text-transform: uppercase;
+    margin-top: 12px;
+    opacity: 0.6;
+  }
+
+  /* Steps */
+  .steps {
+    margin-bottom: 32px;
+  }
+
+  .step {
+    display: flex;
+    gap: 16px;
+    padding: 14px 0;
+    border-bottom: 1px solid var(--line);
+  }
+
+  .step:last-child { border-bottom: none; }
+
+  .step-num {
+    font-family: 'Helvetica Neue', sans-serif;
+    font-size: 11px;
+    letter-spacing: 0.15em;
+    color: var(--accent);
+    font-weight: 700;
+    min-width: 32px;
+    padding-top: 2px;
+  }
+
+  .step-text {
+    font-size: 15px;
+    line-height: 1.45;
+    font-family: 'Helvetica Neue', sans-serif;
+  }
+
+  .step-text strong {
+    font-weight: 600;
+  }
+
+  /* Launch button */
+  .launch-btn {
+    display: block;
+    width: 100%;
+    padding: 18px 24px;
+    background: var(--ink);
+    color: var(--paper);
+    border: none;
+    font-family: 'Helvetica Neue', sans-serif;
+    font-size: 13px;
+    letter-spacing: 0.25em;
+    text-transform: uppercase;
+    cursor: pointer;
+    transition: transform 0.2s ease, background 0.2s ease;
+    margin-top: auto;
+  }
+
+  .launch-btn:hover {
+    background: var(--accent);
+  }
+
+  .launch-btn:active {
+    transform: scale(0.98);
+  }
+
+  .footnote {
+    text-align: center;
+    margin-top: 16px;
+    font-size: 11px;
+    opacity: 0.5;
+    font-family: 'Helvetica Neue', sans-serif;
+    letter-spacing: 0.05em;
+  }
+
+  /* ---------- AR VIEW ---------- */
+  #ar-container {
+    position: fixed;
+    inset: 0;
+    z-index: 1;
+  }
+
+  #ar-container.hidden { display: none; }
+
+  /* Hint overlay during scanning */
+  .scan-hint {
+    position: fixed;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    z-index: 50;
+    pointer-events: none;
+    text-align: center;
+    color: white;
+    font-family: 'Helvetica Neue', sans-serif;
+    text-shadow: 0 2px 8px rgba(0, 0, 0, 0.6);
+    transition: opacity 0.4s ease;
+  }
+
+  .scan-hint.hidden { opacity: 0; }
+
+  .scan-frame {
+    width: 240px;
+    height: 240px;
+    border: 2px solid white;
+    margin: 0 auto 20px;
+    position: relative;
+    animation: pulse 2s ease-in-out infinite;
+  }
+
+  .scan-frame::before, .scan-frame::after,
+  .scan-frame > span::before, .scan-frame > span::after {
+    content: '';
+    position: absolute;
+    width: 24px;
+    height: 24px;
+    border: 3px solid var(--accent);
+  }
+  .scan-frame::before { top: -3px; left: -3px; border-right: 0; border-bottom: 0; }
+  .scan-frame::after { top: -3px; right: -3px; border-left: 0; border-bottom: 0; }
+  .scan-frame > span::before { bottom: -3px; left: -3px; border-right: 0; border-top: 0; position: absolute; }
+  .scan-frame > span::after { bottom: -3px; right: -3px; border-left: 0; border-top: 0; position: absolute; }
+
+  @keyframes pulse {
+    0%, 100% { opacity: 0.7; }
+    50% { opacity: 1; }
+  }
+
+  .scan-hint p {
+    font-size: 14px;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+    margin: 0;
+  }
+
+  /* Top bar in AR view */
+  .ar-topbar {
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    z-index: 60;
+    padding: 16px 20px;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    background: linear-gradient(to bottom, rgba(0,0,0,0.5), transparent);
+    color: white;
+    font-family: 'Helvetica Neue', sans-serif;
+  }
+
+  .ar-topbar.hidden { display: none; }
+
+  .ar-title {
+    font-size: 11px;
+    letter-spacing: 0.2em;
+    text-transform: uppercase;
+    opacity: 0.85;
+  }
+
+  .back-btn {
+    background: rgba(255, 255, 255, 0.15);
+    backdrop-filter: blur(8px);
+    -webkit-backdrop-filter: blur(8px);
+    border: 1px solid rgba(255, 255, 255, 0.3);
+    color: white;
+    padding: 8px 14px;
+    font-size: 11px;
+    letter-spacing: 0.15em;
+    text-transform: uppercase;
+    font-family: inherit;
+    cursor: pointer;
+    border-radius: 2px;
+  }
+
+  /* Status pill (when target found) */
+  .status-pill {
+    position: fixed;
+    bottom: 32px;
+    left: 50%;
+    transform: translateX(-50%);
+    z-index: 60;
+    padding: 10px 18px;
+    background: rgba(217, 79, 48, 0.95);
+    color: white;
+    font-family: 'Helvetica Neue', sans-serif;
+    font-size: 11px;
+    letter-spacing: 0.2em;
+    text-transform: uppercase;
+    border-radius: 100px;
+    transition: opacity 0.3s, transform 0.3s;
+    opacity: 0;
+  }
+
+  .status-pill.visible {
+    opacity: 1;
+  }
+
+  /* Loading state */
+  #loading {
+    position: fixed;
+    inset: 0;
+    z-index: 200;
+    background: var(--paper);
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    font-family: 'Helvetica Neue', sans-serif;
+  }
+
+  #loading.hidden { display: none; }
+
+  .spinner {
+    width: 32px;
+    height: 32px;
+    border: 2px solid var(--line);
+    border-top-color: var(--accent);
+    border-radius: 50%;
+    animation: spin 0.8s linear infinite;
+    margin-bottom: 16px;
+  }
+
+  @keyframes spin {
+    to { transform: rotate(360deg); }
+  }
+
+  #loading p {
+    font-size: 11px;
+    letter-spacing: 0.2em;
+    text-transform: uppercase;
+    opacity: 0.6;
+  }
+
+  /* Error */
+  #error {
+    position: fixed;
+    inset: 0;
+    z-index: 300;
+    background: var(--paper);
+    display: none;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    padding: 32px;
+    text-align: center;
+    font-family: 'Helvetica Neue', sans-serif;
+  }
+
+  #error.visible { display: flex; }
+
+  #error h2 {
+    font-family: Georgia, serif;
+    font-size: 28px;
+    margin-bottom: 12px;
+    font-weight: 400;
+  }
+
+  #error p {
+    font-size: 14px;
+    line-height: 1.5;
+    opacity: 0.75;
+    max-width: 320px;
+  }
+</style>
+</head>
+<body>
+
+<!-- ============ LANDING SCREEN ============ -->
+<div id="landing">
+  <div class="landing-inner">
+    <div class="header-rule">AR Demo · v1.0</div>
+
+    <h1>The drawing<br /><em>becomes</em> the building.</h1>
+    <p class="subtitle">Point your phone at the floor plan below and watch a 3D model rise from the page in augmented reality. No app needed.</p>
+
+    <!-- Target image preview (the floor plan placeholder) -->
+    <div class="target-card">
+      <svg id="target-preview" viewBox="0 0 800 600" xmlns="http://www.w3.org/2000/svg">
+        <!-- Background -->
+        <rect width="800" height="600" fill="#fefdfa"/>
+
+        <!-- Title block (top) -->
+        <rect x="40" y="40" width="280" height="60" fill="none" stroke="#0a0a0a" stroke-width="2"/>
+        <text x="55" y="65" font-family="Helvetica" font-size="11" letter-spacing="2" fill="#0a0a0a">PROJECT 0247</text>
+        <text x="55" y="88" font-family="Georgia" font-size="20" fill="#0a0a0a">North Pavilion</text>
+
+        <!-- Compass (top right) -->
+        <g transform="translate(720, 70)">
+          <circle cx="0" cy="0" r="32" fill="none" stroke="#0a0a0a" stroke-width="1.5"/>
+          <path d="M0,-28 L6,0 L0,28 L-6,0 Z" fill="#d94f30"/>
+          <text x="0" y="-38" font-family="Helvetica" font-size="10" fill="#0a0a0a" text-anchor="middle">N</text>
+        </g>
+
+        <!-- Main building outline -->
+        <g stroke="#0a0a0a" stroke-width="3" fill="none">
+          <!-- Outer wall - irregular L-shape for asymmetry -->
+          <path d="M 120 180 L 540 180 L 540 280 L 680 280 L 680 480 L 380 480 L 380 440 L 120 440 Z" fill="#fbf6e8"/>
+        </g>
+
+        <!-- Interior walls -->
+        <g stroke="#0a0a0a" stroke-width="2" fill="none">
+          <line x1="280" y1="180" x2="280" y2="320"/>
+          <line x1="280" y1="320" x2="420" y2="320"/>
+          <line x1="420" y1="180" x2="420" y2="320"/>
+          <line x1="420" y1="380" x2="540" y2="380"/>
+          <line x1="540" y1="380" x2="540" y2="440"/>
+          <line x1="540" y1="280" x2="540" y2="380"/>
+          <line x1="540" y1="380" x2="680" y2="380"/>
+          <line x1="120" y1="320" x2="280" y2="320"/>
+        </g>
+
+        <!-- Door swings -->
+        <g stroke="#0a0a0a" stroke-width="1" fill="none">
+          <path d="M 180 320 A 35 35 0 0 1 215 355" />
+          <line x1="180" y1="320" x2="215" y2="320" stroke-width="2"/>
+          <path d="M 350 320 A 30 30 0 0 1 380 350" />
+          <path d="M 480 380 A 25 25 0 0 1 505 405" />
+        </g>
+
+        <!-- Furniture / fixtures (provides feature points) -->
+        <g stroke="#0a0a0a" stroke-width="1" fill="none">
+          <!-- Room 1: meeting table -->
+          <rect x="160" y="220" width="80" height="40" rx="4"/>
+          <circle cx="180" cy="240" r="5"/>
+          <circle cx="220" cy="240" r="5"/>
+          <!-- Room 2: workstations -->
+          <rect x="310" y="220" width="40" height="20"/>
+          <rect x="370" y="220" width="40" height="20"/>
+          <rect x="310" y="270" width="40" height="20"/>
+          <rect x="370" y="270" width="40" height="20"/>
+          <!-- Room 3: lounge -->
+          <rect x="450" y="200" width="60" height="25" rx="3"/>
+          <rect x="450" y="240" width="25" height="60" rx="3"/>
+          <!-- Stairs -->
+          <g>
+            <rect x="160" y="360" width="80" height="60" fill="none"/>
+            <line x1="160" y1="370" x2="240" y2="370"/>
+            <line x1="160" y1="380" x2="240" y2="380"/>
+            <line x1="160" y1="390" x2="240" y2="390"/>
+            <line x1="160" y1="400" x2="240" y2="400"/>
+            <line x1="160" y1="410" x2="240" y2="410"/>
+          </g>
+          <!-- Bathroom fixtures -->
+          <circle cx="600" cy="320" r="8"/>
+          <circle cx="630" cy="320" r="8"/>
+          <rect x="585" y="345" width="20" height="12" rx="2"/>
+        </g>
+
+        <!-- Dimension lines & numbers -->
+        <g font-family="Helvetica" font-size="11" fill="#0a0a0a">
+          <line x1="120" y1="155" x2="540" y2="155" stroke="#0a0a0a" stroke-width="0.5"/>
+          <line x1="120" y1="148" x2="120" y2="162" stroke="#0a0a0a" stroke-width="0.5"/>
+          <line x1="540" y1="148" x2="540" y2="162" stroke="#0a0a0a" stroke-width="0.5"/>
+          <text x="330" y="148" text-anchor="middle">42'-0"</text>
+
+          <line x1="105" y1="180" x2="105" y2="440" stroke="#0a0a0a" stroke-width="0.5"/>
+          <line x1="98" y1="180" x2="112" y2="180" stroke="#0a0a0a" stroke-width="0.5"/>
+          <line x1="98" y1="440" x2="112" y2="440" stroke="#0a0a0a" stroke-width="0.5"/>
+          <text x="95" y="315" text-anchor="end">26'-0"</text>
+        </g>
+
+        <!-- Room labels -->
+        <g font-family="Georgia" font-size="13" fill="#0a0a0a" font-style="italic">
+          <text x="200" y="290" text-anchor="middle">Conference</text>
+          <text x="350" y="250" text-anchor="middle">Office</text>
+          <text x="480" y="280" text-anchor="middle">Lounge</text>
+          <text x="610" y="430" text-anchor="middle">Kitchen</text>
+          <text x="200" y="395" text-anchor="middle">Lobby</text>
+        </g>
+
+        <!-- Grid markers (provide tracking features) -->
+        <g font-family="Helvetica" font-size="14" fill="#d94f30">
+          <circle cx="120" cy="180" r="14" fill="white" stroke="#d94f30" stroke-width="2"/>
+          <text x="120" y="184" text-anchor="middle" font-weight="bold">A</text>
+          <circle cx="540" cy="180" r="14" fill="white" stroke="#d94f30" stroke-width="2"/>
+          <text x="540" y="184" text-anchor="middle" font-weight="bold">B</text>
+          <circle cx="680" cy="280" r="14" fill="white" stroke="#d94f30" stroke-width="2"/>
+          <text x="680" y="284" text-anchor="middle" font-weight="bold">C</text>
+          <circle cx="680" cy="480" r="14" fill="white" stroke="#d94f30" stroke-width="2"/>
+          <text x="680" y="484" text-anchor="middle" font-weight="bold">D</text>
+          <circle cx="120" cy="440" r="14" fill="white" stroke="#d94f30" stroke-width="2"/>
+          <text x="120" y="444" text-anchor="middle" font-weight="bold">E</text>
+        </g>
+
+        <!-- Bottom info strip -->
+        <g font-family="Helvetica" font-size="10" letter-spacing="1.5" fill="#0a0a0a" opacity="0.7">
+          <line x1="40" y1="540" x2="760" y2="540" stroke="#0a0a0a" stroke-width="0.5" opacity="0.4"/>
+          <text x="40" y="560">SCALE 1:100</text>
+          <text x="400" y="560" text-anchor="middle">FLOOR PLAN — LEVEL 01</text>
+          <text x="760" y="560" text-anchor="end">SHEET A-101</text>
+        </g>
+      </svg>
+      <div class="target-label">
+        <span>Floor Plan</span>
+        <span>Scan Target</span>
+      </div>
+    </div>
+
+    <div class="steps">
+      <div class="step">
+        <div class="step-num">01</div>
+        <div class="step-text"><strong>Print or display</strong> the floor plan above on another screen or paper.</div>
+      </div>
+      <div class="step">
+        <div class="step-num">02</div>
+        <div class="step-text"><strong>Tap Launch</strong> below and allow camera access when prompted.</div>
+      </div>
+      <div class="step">
+        <div class="step-num">03</div>
+        <div class="step-text"><strong>Aim your camera</strong> at the floor plan and watch the building appear.</div>
+      </div>
+    </div>
+
+    <button class="launch-btn" id="launch">Launch AR Experience →</button>
+    <p class="footnote">Best viewed on a mobile device · Requires HTTPS</p>
+  </div>
+</div>
+
+<!-- ============ AR VIEW ============ -->
+<div id="ar-container" class="hidden"></div>
+
+<div class="ar-topbar hidden" id="ar-topbar">
+  <span class="ar-title">North Pavilion · AR</span>
+  <button class="back-btn" id="back-btn">Exit</button>
+</div>
+
+<div class="scan-hint hidden" id="scan-hint">
+  <div class="scan-frame"><span></span></div>
+  <p>Point at floor plan</p>
+</div>
+
+<div class="status-pill" id="status-pill">Target Locked</div>
+
+<!-- ============ LOADING ============ -->
+<div id="loading" class="hidden">
+  <div class="spinner"></div>
+  <p>Preparing AR · Please wait</p>
+</div>
+
+<!-- ============ ERROR ============ -->
+<div id="error">
+  <h2>Camera unavailable</h2>
+  <p>This demo needs camera access and an HTTPS connection. Please reload over HTTPS and allow camera permissions.</p>
+</div>
+
+<!-- ============ SCRIPTS ============ -->
+<script type="importmap">
+{
+  "imports": {
+    "three": "https://cdn.jsdelivr.net/npm/three@0.160.0/build/three.module.js",
+    "three/addons/": "https://cdn.jsdelivr.net/npm/three@0.160.0/examples/jsm/",
+    "mindar-image-three": "https://cdn.jsdelivr.net/npm/mind-ar@1.2.5/dist/mindar-image-three.prod.js"
+  }
+}
+</script>
+
+<script type="module">
+  import * as THREE from 'three';
+  import { MindARThree } from 'mindar-image-three';
+
+  const landing = document.getElementById('landing');
+  const arContainer = document.getElementById('ar-container');
+  const arTopbar = document.getElementById('ar-topbar');
+  const scanHint = document.getElementById('scan-hint');
+  const statusPill = document.getElementById('status-pill');
+  const loading = document.getElementById('loading');
+  const errorEl = document.getElementById('error');
+  const launchBtn = document.getElementById('launch');
+  const backBtn = document.getElementById('back-btn');
+
+  let mindarThree = null;
+  let buildingGroup = null;
+  let animationId = null;
+  let isTargetVisible = false;
+
+  // ---------- BUILD THE PLACEHOLDER 3D BUILDING ----------
+  // Procedural building that roughly matches the floor plan footprint above.
+  // Floor plan is 800x600 SVG; we map that to ~1.0 x 0.75 in MindAR coords.
+  function createBuilding() {
+    const group = new THREE.Group();
+
+    // Lighting
+    const ambient = new THREE.AmbientLight(0xffffff, 0.55);
+    group.add(ambient);
+
+    const sun = new THREE.DirectionalLight(0xfff4e0, 1.0);
+    sun.position.set(2, 4, 3);
+    group.add(sun);
+
+    const fill = new THREE.DirectionalLight(0x88aaff, 0.3);
+    fill.position.set(-2, 2, -2);
+    group.add(fill);
+
+    // Materials
+    const wallMat = new THREE.MeshStandardMaterial({
+      color: 0xf0e6d2,
+      roughness: 0.85,
+      metalness: 0.0,
+    });
+    const accentMat = new THREE.MeshStandardMaterial({
+      color: 0xd94f30,
+      roughness: 0.6,
+      metalness: 0.1,
+    });
+    const glassMat = new THREE.MeshStandardMaterial({
+      color: 0x88b8d8,
+      roughness: 0.1,
+      metalness: 0.4,
+      transparent: true,
+      opacity: 0.55,
+    });
+    const roofMat = new THREE.MeshStandardMaterial({
+      color: 0x2a2a2a,
+      roughness: 0.7,
+      metalness: 0.2,
+    });
+    const darkMat = new THREE.MeshStandardMaterial({
+      color: 0x1a1a1a,
+      roughness: 0.9,
+    });
+
+    // Coordinates: floor plan is L-shaped.
+    // Main rectangle: x 120..540 (width 420), y 180..440 (height 260) in SVG
+    // Extension: x 540..680 (width 140), y 280..480 (height 200) in SVG
+    // Map SVG 800x600 -> 3D scene 1.0 x 0.75 (centered on origin)
+    const SCALE_X = 1.0 / 800;
+    const SCALE_Y = 0.75 / 600;
+
+    // Helper to create wall blocks. SVG coords: x1, y1 (top-left), w, h, height (3D)
+    function addBlock(svgX, svgY, svgW, svgH, height3D, mat) {
+      const w = svgW * SCALE_X;
+      const d = svgH * SCALE_Y;
+      const geo = new THREE.BoxGeometry(w, height3D, d);
+      const mesh = new THREE.Mesh(geo, mat);
+      // Center of block in 3D
+      // SVG origin is top-left; in MindAR coords, image is in XY plane,
+      // anchor (0,0) is image center, +Y points up the image.
+      const cx = (svgX + svgW / 2 - 400) * SCALE_X;
+      const cy = -(svgY + svgH / 2 - 300) * SCALE_Y; // flip Y
+      mesh.position.set(cx, height3D / 2, -cy);
+      // Note: MindAR image plane: x right, y up (in plane), z out toward camera
+      // We want building to extrude along z (out of plane).
+      // Better mapping: place blocks in XY plane and extrude along Z.
+      mesh.rotation.x = -Math.PI / 2; // lay flat? No — handled via group transform
+      return mesh;
+    }
+
+    // We'll build directly with proper orientation.
+    // Convention: image plane = XZ (x right, z forward in plane), Y up out of image.
+    // So we extrude buildings along +Y.
+    function block(svgX, svgY, svgW, svgH, height3D, mat) {
+      const w = svgW * SCALE_X;
+      const d = svgH * SCALE_Y;
+      const geo = new THREE.BoxGeometry(w, height3D, d);
+      const mesh = new THREE.Mesh(geo, mat);
+      const cx = (svgX + svgW / 2 - 400) * SCALE_X;
+      const cz = (svgY + svgH / 2 - 300) * SCALE_Y;
+      mesh.position.set(cx, height3D / 2, cz);
+      return mesh;
+    }
+
+    const FLOOR_HEIGHT = 0.08;
+    const WALL_HEIGHT = 0.18;
+    const ROOF_THICK = 0.012;
+
+    // ----- Footprint base (slight platform) -----
+    const baseMat = new THREE.MeshStandardMaterial({ color: 0xe8dec5, roughness: 0.95 });
+    // Main rect: 120..540 x, 180..440 y
+    group.add(block(120, 180, 420, 260, FLOOR_HEIGHT * 0.4, baseMat));
+    // Extension: 540..680 x, 280..480 y
+    group.add(block(540, 280, 140, 200, FLOOR_HEIGHT * 0.4, baseMat));
+
+    // ----- Ground floor (solid) -----
+    group.add(block(120, 180, 420, 260, FLOOR_HEIGHT, wallMat));
+    group.add(block(540, 280, 140, 200, FLOOR_HEIGHT, wallMat));
+
+    // ----- Walls of floor 1 (perimeter, hollow look via thin walls) -----
+    // We'll fake a hollow floor with an outer shell
+    function shell(svgX, svgY, svgW, svgH, baseY, height) {
+      const t = 12; // wall thickness in SVG units
+      // top wall
+      const top = block(svgX, svgY, svgW, t, height, wallMat);
+      top.position.y = baseY + height / 2;
+      group.add(top);
+      // bottom wall
+      const bot = block(svgX, svgY + svgH - t, svgW, t, height, wallMat);
+      bot.position.y = baseY + height / 2;
+      group.add(bot);
+      // left wall
+      const left = block(svgX, svgY, t, svgH, height, wallMat);
+      left.position.y = baseY + height / 2;
+      group.add(left);
+      // right wall
+      const right = block(svgX + svgW - t, svgY, t, svgH, height, wallMat);
+      right.position.y = baseY + height / 2;
+      group.add(right);
+    }
+
+    // Floor 2: walls
+    const F1_BASE = FLOOR_HEIGHT;
+    shell(120, 180, 420, 260, F1_BASE, WALL_HEIGHT);
+    shell(540, 280, 140, 200, F1_BASE, WALL_HEIGHT);
+
+    // Windows on long sides (glass strips)
+    const winStrip1 = block(140, 175, 380, 5, WALL_HEIGHT * 0.5, glassMat);
+    winStrip1.position.y = F1_BASE + WALL_HEIGHT * 0.55;
+    group.add(winStrip1);
+
+    const winStrip2 = block(140, 435, 380, 5, WALL_HEIGHT * 0.5, glassMat);
+    winStrip2.position.y = F1_BASE + WALL_HEIGHT * 0.55;
+    group.add(winStrip2);
+
+    // Roof slab over floor 1
+    const roof1 = block(115, 175, 430, 270, ROOF_THICK, roofMat);
+    roof1.position.y = F1_BASE + WALL_HEIGHT + ROOF_THICK / 2;
+    group.add(roof1);
+
+    // Roof slab over extension
+    const roof2 = block(535, 275, 150, 210, ROOF_THICK, roofMat);
+    roof2.position.y = F1_BASE + WALL_HEIGHT + ROOF_THICK / 2;
+    group.add(roof2);
+
+    // ----- Second floor (only over main rectangle) - smaller footprint -----
+    const F2_BASE = F1_BASE + WALL_HEIGHT + ROOF_THICK;
+    // Floor slab
+    group.add((() => {
+      const m = block(160, 200, 340, 220, FLOOR_HEIGHT * 0.5, wallMat);
+      m.position.y = F2_BASE + (FLOOR_HEIGHT * 0.25);
+      return m;
+    })());
+    // Walls
+    shell(160, 200, 340, 220, F2_BASE + FLOOR_HEIGHT * 0.5, WALL_HEIGHT);
+    // Glass curtain wall on south
+    const curtain = block(170, 415, 320, 6, WALL_HEIGHT * 0.7, glassMat);
+    curtain.position.y = F2_BASE + FLOOR_HEIGHT * 0.5 + WALL_HEIGHT * 0.4;
+    group.add(curtain);
+
+    // Roof for floor 2
+    const roof3 = block(155, 195, 350, 230, ROOF_THICK, roofMat);
+    roof3.position.y = F2_BASE + FLOOR_HEIGHT * 0.5 + WALL_HEIGHT + ROOF_THICK / 2;
+    group.add(roof3);
+
+    // ----- Tower / accent volume on top -----
+    const TOWER_BASE = F2_BASE + FLOOR_HEIGHT * 0.5 + WALL_HEIGHT + ROOF_THICK;
+    const tower = block(220, 240, 80, 60, WALL_HEIGHT * 1.2, accentMat);
+    tower.position.y = TOWER_BASE + WALL_HEIGHT * 0.6;
+    group.add(tower);
+
+    // Tower roof
+    const towerRoof = block(215, 235, 90, 70, ROOF_THICK, darkMat);
+    towerRoof.position.y = TOWER_BASE + WALL_HEIGHT * 1.2 + ROOF_THICK / 2;
+    group.add(towerRoof);
+
+    // ----- Entrance canopy (accent) -----
+    const canopy = block(180, 437, 80, 14, ROOF_THICK * 1.5, accentMat);
+    canopy.position.y = F1_BASE + WALL_HEIGHT * 0.7;
+    group.add(canopy);
+
+    // ----- Rooftop element on extension (mechanical) -----
+    const mech = block(580, 320, 60, 40, WALL_HEIGHT * 0.4, darkMat);
+    mech.position.y = F1_BASE + WALL_HEIGHT + ROOF_THICK + WALL_HEIGHT * 0.2;
+    group.add(mech);
+
+    // ----- Subtle entrance marker (vertical accent on facade) -----
+    const entranceMarker = block(215, 432, 10, 12, WALL_HEIGHT, accentMat);
+    entranceMarker.position.y = F1_BASE + WALL_HEIGHT / 2;
+    group.add(entranceMarker);
+
+    // Animate the building rising in
+    group.userData.targetY = 0;
+    group.userData.currentY = -0.3;
+    group.position.y = -0.3;
+
+    return group;
+  }
+
+  // ---------- MINDAR INIT ----------
+  // We need a .mind file (compiled target). For the demo, we use a hosted
+  // example target as fallback if the user hasn't compiled one yet.
+  // In production: compile your floor plan PNG via MindAR's online compiler:
+  // https://hiukim.github.io/mind-ar-js-doc/tools/compile
+  //
+  // For this demo, we generate the .mind on the fly is NOT possible client-side,
+  // so we ship a pre-compiled targets.mind file alongside this HTML, OR use a
+  // hosted demo target from MindAR's CDN.
+  const TARGET_URL = './targets.mind';
+
+  async function startAR() {
+    loading.classList.remove('hidden');
+    landing.classList.add('hidden');
+
+    try {
+      mindarThree = new MindARThree({
+        container: arContainer,
+        imageTargetSrc: TARGET_URL,
+        uiLoading: 'no',
+        uiScanning: 'no',
+        uiError: 'no',
+      });
+
+      const { renderer, scene, camera } = mindarThree;
+      const anchor = mindarThree.addAnchor(0);
+
+      // Build & attach
+      buildingGroup = createBuilding();
+      anchor.group.add(buildingGroup);
+
+      anchor.onTargetFound = () => {
+        isTargetVisible = true;
+        scanHint.classList.add('hidden');
+        statusPill.classList.add('visible');
+        setTimeout(() => statusPill.classList.remove('visible'), 1800);
+      };
+
+      anchor.onTargetLost = () => {
+        isTargetVisible = false;
+        scanHint.classList.remove('hidden');
+      };
+
+      await mindarThree.start();
+
+      loading.classList.add('hidden');
+      arContainer.classList.remove('hidden');
+      arTopbar.classList.remove('hidden');
+      scanHint.classList.remove('hidden');
+
+      const animate = () => {
+        animationId = requestAnimationFrame(animate);
+
+        // Smooth rise-in animation
+        if (buildingGroup && isTargetVisible) {
+          buildingGroup.userData.currentY +=
+            (buildingGroup.userData.targetY - buildingGroup.userData.currentY) * 0.08;
+          buildingGroup.position.y = buildingGroup.userData.currentY;
+
+          // Gentle hover rotation
+          buildingGroup.rotation.y += 0.002;
+        }
+
+        renderer.render(scene, camera);
+      };
+      animate();
+    } catch (err) {
+      console.error('AR start failed:', err);
+      loading.classList.add('hidden');
+      errorEl.classList.add('visible');
+    }
+  }
+
+  async function stopAR() {
+    if (animationId) cancelAnimationFrame(animationId);
+    if (mindarThree) {
+      try { await mindarThree.stop(); } catch (e) {}
+      try { mindarThree.renderer.setAnimationLoop(null); } catch (e) {}
+      mindarThree = null;
+    }
+    arContainer.innerHTML = '';
+    arContainer.classList.add('hidden');
+    arTopbar.classList.add('hidden');
+    scanHint.classList.add('hidden');
+    statusPill.classList.remove('visible');
+    landing.classList.remove('hidden');
+  }
+
+  launchBtn.addEventListener('click', startAR);
+  backBtn.addEventListener('click', stopAR);
+</script>
+
+</body>
+</html>
