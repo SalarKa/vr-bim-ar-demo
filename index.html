@@ -828,7 +828,9 @@
   const USE_TEST_TARGET = new URLSearchParams(location.search).has('test');
   const TEST_TARGET_URL = 'https://cdn.jsdelivr.net/gh/hiukim/mind-ar-js@1.2.5/examples/image-tracking/assets/card-example/card.mind';
   const TEST_IMAGE_URL = 'https://cdn.jsdelivr.net/gh/hiukim/mind-ar-js@1.2.5/examples/image-tracking/assets/card-example/card.png';
-  const TARGET_URL = USE_TEST_TARGET ? TEST_TARGET_URL : './targets.mind';
+  // Append a cache-busting query string so Safari can't serve a stale .mind
+  // (happens when we regenerate the target but the browser/CDN holds the old file).
+  const TARGET_URL = USE_TEST_TARGET ? TEST_TARGET_URL : ('./targets.mind?v=' + Date.now());
   if (USE_TEST_TARGET) dbg('TEST MODE · point camera at ' + TEST_IMAGE_URL);
 
   async function startAR() {
